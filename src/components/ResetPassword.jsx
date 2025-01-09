@@ -1,12 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
+  const [isValidToken, setIsValidToken] = useState(false);
   const navigate = useNavigate();
   const { token } = useParams();
   const resetToken = token;
+
+  useEffect(() => {
+    const verifyToken = async () => {
+      try {
+        const response = await fetch(`https://auth-backend-j34e.onrender.com/api/reset-password/${resetToken}`);
+        if (!response.ok) {
+          throw new Error('Token invalide ou expiré');
+        }
+        setIsValidToken(true);
+      } catch (error) {
+        setError(error.message);
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      }
+    };
+
+    verifyToken();
+  }, [resetToken, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -16,16 +37,24 @@ const ResetPassword = () => {
         body: JSON.stringify({ resetToken, newPassword }),
       });
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(data.message);
       }
-
       navigate('/login', { state: { message: 'Mot de passe réinitialisé avec succès' } });
     } catch (error) {
       setError(error.message);
     }
   };
+
+  if (!isValidToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="max-w-md w-full p-8 bg-white rounded-lg shadow">
+          <p className="text-center text-red-500">{error || 'Vérification du token...'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
